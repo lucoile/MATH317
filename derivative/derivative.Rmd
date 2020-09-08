@@ -5,24 +5,53 @@ output: pdf_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(tibble)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
 ```
 
-## R Markdown
+```{r}
+ff <- function(x) {
+  return (x ^ 3)
+}
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+x0 <- 5.
+true <- 75.
+npts <- 200
+hmin <- 1.e-17
+hmax <- 20.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+deriv <- function(f, x0, true, npts, hmin, hmax) {
+  data <- list()
+  
+  for (ieps in 1:npts) {
+    eps <- hmin * ((hmax/hmin) ^ ((ieps - 1)/(npts - 1)))
+    fp <- ff(x0 + eps)
+    fm <- ff(x0)
+    h <- eps
+    d <- (fp - fm) / h
+    err <- abs(d - true) / abs(true)
+    
+    data[[length(data) + 1]] <- tibble("h" = h, "d" = d, "err" = err)
+  }
+  
+  return (bind_rows(data))
+}
 
-```{r cars}
-summary(cars)
+deriv_data <- deriv(ff, x0, true, npts, hmin, hmax)
+deriv_data %>% head()
+
+deriv_data %>% ggplot(aes(x = h, y = d)) +
+  geom_point() + 
+  geom_line() + 
+  scale_x_continuous(trans = 'log2') +
+  scale_y_continuous(trans = 'log2')
+
+deriv_data %>% ggplot(aes(x = h, y = err)) +
+  geom_point() + 
+  geom_line() + 
+  scale_x_continuous(trans = 'log2') +
+  scale_y_continuous(trans = 'log2')
 ```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
