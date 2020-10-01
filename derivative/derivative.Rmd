@@ -7,25 +7,30 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tibble)
-library(tidyr)
 library(dplyr)
 library(ggplot2)
 ```
 
 ```{r}
+# function to derive
 ff <- function(x) {
   return (x ^ 3)
 }
 
+# parameters
 x0 <- 5.
 true <- 75.
 npts <- 200
 hmin <- 1.e-17
 hmax <- 20.
 
+# method that calculates the derivative of any function f 
+# and outputs a tibble with h, d, error columns
 deriv <- function(f, x0, true, npts, hmin, hmax) {
+  # initialize list of derivative calculations
   data <- list()
   
+  # calculate h, derivative, and error for npts different points
   for (ieps in 1:npts) {
     eps <- hmin * ((hmax/hmin) ^ ((ieps - 1)/(npts - 1)))
     fp <- ff(x0 + eps)
@@ -34,24 +39,29 @@ deriv <- function(f, x0, true, npts, hmin, hmax) {
     d <- (fp - fm) / h
     err <- abs(d - true) / abs(true)
     
+    # add calculated h, d, and err to the list 
     data[[length(data) + 1]] <- tibble("h" = h, "d" = d, "err" = err)
   }
   
+  # combine all the data into one tibble and output
   return (bind_rows(data))
 }
 
+# calculate derivative and print first 5 rows
 deriv_data <- deriv(ff, x0, true, npts, hmin, hmax)
 deriv_data %>% head()
 
+# plot the derivative
 deriv_data %>% ggplot(aes(x = h, y = d)) +
   geom_point() + 
   geom_line() + 
-  scale_x_continuous(trans = 'log2') +
-  scale_y_continuous(trans = 'log2')
+  scale_x_continuous(trans = 'log10') +
+  scale_y_continuous(trans = 'log10')
 
+# plot the error
 deriv_data %>% ggplot(aes(x = h, y = err)) +
   geom_point() + 
   geom_line() + 
-  scale_x_continuous(trans = 'log2') +
-  scale_y_continuous(trans = 'log2')
+  scale_x_continuous(trans = 'log10') +
+  scale_y_continuous(trans = 'log10')
 ```

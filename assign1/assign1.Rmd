@@ -1,0 +1,168 @@
+---
+title: "MATH 317 Assignment 1"
+subtitle: Thomas Buffard
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tibble)
+library(dplyr)
+library(ggplot2)
+library(knitr)
+```
+
+## Problem 1.
+**(a).** We know that $\sqrt{\pi} = 1.7724$. So we can calculate the error of $\sqrt{\pi}$ with different numbers of known digits:
+```{r}
+sqrt_err <- function(approx) {
+  return(abs(sqrt(approx) - sqrt(pi)))
+}
+
+data <- list()
+for (n in 0:5) {
+  approx <- signif(2 * acos(0.0), (n + 1))
+  data[[length(data) + 1]] <- tibble("n" = n, "pi_approx" = approx,
+                                     "sqrt_approx" = sqrt(approx), 
+                                     "err" =   sqrt_err(approx))
+}
+
+data <- bind_rows(data)
+kable(data)
+```
+
+
+Thus we can see that we need to know $\pi$ with at least three digits to compute $\sqrt{\pi}$ with four correct decimals, or an error less than $10^{-4}$.
+
+**(b).** To convert to base 10 we do: 
+$$
+2^{1} + 2^{0} + 2^{-1} + 2^{-2} + 2^{-3} + 2^{-4} + 2^{-6} = 2 + 1 + 0.5 + 0.25 + 0.125 + 0.0625 + 0.015625 = 3.953125
+$$
+\newpage
+
+## Problem 2.
+Given the function $f(x) = \dfrac{1}{\sqrt{(1+x^2)} - \sqrt{(1-x^2)}}$, we know that $f(x)$ is singular at $x = 0$. So as $x$ gets arbitrarily close to to zero, say $x = 10^{-10} \implies x^2 = 10^{-20}$, the terms $\sqrt{(1+x^2)}$ and $\sqrt{(1-x^2)}$ get closer to 1 and cancel out in the denominator. Thus we need to rewrite the function in order to analyze it as $x$ approaches $0$:
+\[
+    \begin{aligned}
+        f(x) =& \dfrac{1}{\sqrt{(1+x^2)} - \sqrt{(1-x^2)}}\\
+        =& \dfrac{1}{\sqrt{(1+x^2)} - \sqrt{(1-x^2)}} \dfrac{\sqrt{(1+x^2)} + \sqrt{(1-x^2)}}{\sqrt{(1+x^2)} + \sqrt{(1-x^2)}}\\
+        =& \dfrac{\sqrt{(1+x^2)} + \sqrt{(1-x^2)}}{(\sqrt{(1+x^2)})^2 - (\sqrt{(1-x^2)})^2} \\
+        =& \dfrac{\sqrt{(1+x^2)} + \sqrt{(1-x^2)}}{(1+x^2) - (1-x^2)}\\
+        f(x) =& \dfrac{\sqrt{(1+x^2)} + \sqrt{(1-x^2)}}{2x^2}
+    \end{aligned}
+\]
+Now we can use the rewritten $f(x)$ to accurately analyze the function as it get gets close to $0$.
+
+\newpage
+
+## Problem 3.
+```{r}
+# The function to calculate the root of
+f <- function(x) {
+  return(sqrt(x) - exp(-x))
+}
+
+f_prime <- function(x) {
+  return((1 / (2 * sqrt(x))) + exp(-x))
+}
+
+# Secant method for calculating roots
+# Takes a function f, initial guesses x0, x1, 
+# n number of iterations, and the root r
+sec <- function(f, x0, x1, n = 5, r = 0.4263028) {
+  data <- list()
+  a <- x0
+  b <- x1
+  data[[length(data) + 1]] <- tibble("n" = 0, "x_n" = a, "err" = abs(a - r) / abs(r))
+  data[[length(data) + 1]] <- tibble("n" = 1, "x_n" = b, "err" = abs(b - r) / abs(r))
+  
+  for (i in 2:(n+2)) {
+    c <- a - (f(a) * ((a - b) / (f(a) - f(b))))
+    b <- a
+    a <- c
+    
+    data[[length(data) + 1]] <- tibble("n" = i, "x_n" = a, "err" = abs(a - r) / abs(r))
+  }
+  
+  return (bind_rows(data))
+}
+
+# Compute root using Secant method with initial guesses x0 = 1.0 and x1 = 0.75
+sec_data <- sec(f, 1.0, .75)
+kable(sec_data)
+
+newton <- function(f, f_prime, x0, n = 5, r = 0.4263028) {
+  data <- list()
+  a <- x0
+  data[[length(data) + 1]] <- tibble("n" = 0, "x_n" = a, "err" = abs(a - r) / abs(r))
+
+  for (i in 1:(n+1)) {
+    a <- a - (f(a) / f_prime(a))
+      data[[length(data) + 1]] <- tibble("n" = i, "x_n" = a, "err" = abs(a - r) / abs(r))
+  }
+  
+  return (bind_rows(data))
+}
+
+# Compute root using Newton-Raphson method with initial guess 1.0
+newt_data <- newton(f, f_prime, 1.0)
+kable(newt_data)
+```
+
+\newpage
+
+## Problem 4
+
+
+```{r}
+phi_1 <- function(x) {
+  return(exp(-2 * x))
+}
+
+phi_2 <- function(x) {
+  return(-log(x, base = exp(1)) / 2)
+}
+
+fixed_point <- function(phi, x0, n = 5, r = 0.4263028) {
+  data <- list()
+  a <- x0
+  data[[length(data) + 1]] <- tibble("n" = 0, "x_n" = a, "err" = abs(a - r) / abs(r))
+
+  for (i in 1:(n+1)) {
+    a <- phi(a)
+      data[[length(data) + 1]] <- tibble("n" = i, "x_n" = a, "err" = abs(a - r) / abs(r))
+  }
+  
+  return (bind_rows(data))
+}
+
+kable(fixed_point(phi_1, 0.5, n = 20))
+kable(fixed_point(phi_2, 0.5, n = 15))
+```
+For the first fixed-point iteration $\varphi(x) = e^{-2x}$ we can see from the derivative $\varphi'(x) = -2e^{-x}$ that $|\varphi'(x)| = 2e^{-2x} < 1 \; \forall x$. Thus this fixed-point iteration converges by the theorem on convergence. Furthermore, we can see that the data confirms this even though it converges very slowly compared to the two methods in Problem 2.
+
+For the second fixed-point iteration $\varphi(x) = -\frac{ln(x)}{2}$ we can see from the derivative $\varphi'(x) = -\frac{1}{2x}$ that $|\varphi'(x)| = \frac{1}{2x} \geq 1$ for $|x| < \frac{1}{2}$. Thus since our root $|x^*| < \frac{1}{2}$, this fixed-point iteration diverges by the theorem on convergence. This can be seen in our data as our $x_n$ look random and eventually become unrecognizable by the computer (NaN).
+
+\newpage
+
+## Problem 5
+This fixed point iteration gives us the function $\varphi(x) = \dfrac{\lambda x + 1 - \sin(x)}{1 + \lambda}$ and the derivative $\varphi'(x) = \dfrac{\lambda - \cos(x)}{\lambda + 1}$. So the fixed point iteration converges for $|\varphi(x)| < 1$.
+\[
+    \begin{aligned}
+        |\varphi(x)| < 1 &\implies |\lambda - \cos(x)| < |1 + \lambda| \\
+        &\implies |\lambda - \cos(x)| \leq |\lambda| + |-\cos(x)| < |1 + \lambda| \leq 1 + |\lambda|\\
+        &\implies |\lambda| + |-\cos(x)| < 1 + |\lambda|\\
+        &\implies \cos(x) < 1
+    \end{aligned}
+\]
+Thus the fixed point interval converges for all $x \in \mathbb{R}$, and furthermore we see that the convergence doesn't depend on $\lambda$. To speed up the convergence of $x_n$ to the root $x^*$, we could choose $\lambda$ such that $\varphi'(x^*) = 0$. This would cause the convergence to be quadratic or higher instead of linear. 
+\[
+    \begin{aligned}
+    \varphi'(x^*) = 0 &\implies \dfrac{\lambda - \cos(x^*)}{\lambda + 1} = 0\\
+    &\implies \lambda - \cos(x^*) = 0\\
+    &\implies \lambda = \cos(x^*)
+    \end{aligned}
+\]
+Thus by choosing $\lambda := \cos(x^*)$ we can get a convergence that is quadratic or higher.
+
